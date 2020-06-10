@@ -1028,11 +1028,20 @@ static void setattrCallback(
   bool retry;
 
   if (ctx->succeeded(rpc_status, RSTATUS(res), retry)) {
-    assert(res->SETATTR3res_u.resok.obj_wcc.after.attributes_follow);
-    struct stat st;
-    ctx->getClient()->stat_from_fattr3(
-        &st, &res->SETATTR3res_u.resok.obj_wcc.after.post_op_attr_u.attributes);
-    ctx->replyAttr(&st, NfsClient::getAttrTimeout());
+    if (res->SETATTR3res_u.resok.obj_wcc.after.attributes_follow) {
+      struct stat st;
+      ctx->getClient()->stat_from_fattr3(
+          &st, &res->SETATTR3res_u.resok.obj_wcc.after.post_op_attr_u.attributes);
+      ctx->replyAttr(&st, NfsClient::getAttrTimeout());
+    } else {
+      // This is an ugly hack, but we have to fail the connection here to
+      // avoid a deadlock.
+      // Is there a better solution?
+      ctx->failConnection();
+      ctx->getClient()->getattr(
+        ctx->getReq(), ctx->getInode(), ctx->getFile());
+      delete ctx;
+    }
   } else if (retry) {
     ctx->getClient()->setattrWithContext(ctx);
   }
