@@ -12,6 +12,7 @@
 #include "logger.h"
 
 #include <limits.h>
+#include <sys/sysmacros.h>
 #include <nfsc/libnfs.h>
 #include <cassert>
 #include <chrono>
